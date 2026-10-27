@@ -17,7 +17,40 @@ if not all([AIRLABS_API_KEY, TELEGRAM_BOT_TOKEN]):
     print("Error: Missing API keys.")
     sys.exit(1)
 
-# ... (load_data, save_data, send_telegram_message, get_updates remain same) ...
+TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+
+def load_data():
+    try:
+        with open(DATA_FILE) as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = {}
+    for key in ("groups", "subscriptions", "flight_states"):
+        data.setdefault(key, {})
+    return data
+
+def save_data(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+def send_telegram_message(chat_id, text):
+    try:
+        r = requests.post(f"{TELEGRAM_API}/sendMessage",
+                          json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}, timeout=10)
+        if not r.json().get("ok"):
+            requests.post(f"{TELEGRAM_API}/sendMessage", json={"chat_id": chat_id, "text": text}, timeout=10)
+    except Exception as e:
+        print(f"Error sending message: {e}")
+
+def get_updates(offset=None):
+    params = {"timeout": 0}
+    if offset is not None:
+        params["offset"] = offset
+    try:
+        return requests.get(f"{TELEGRAM_API}/getUpdates", params=params, timeout=10).json().get("result", [])
+    except Exception as e:
+        print(f"Error fetching updates: {e}")
+        return []
 
 def get_flight_status(flight_iata):
     url = "https://airlabs.co/api/v9/flight"
@@ -51,7 +84,7 @@ def format_message(flight_data):
     arr_gate = flight_data.get('arr_gate')
     baggage = flight_data.get('arr_baggage')
     
-    msg = f"✈️ **{flight_num} Status: {status}**\n🛫 {dep} -> 🛬 {arr}\n🕒 Dep: {dep_time}"
+    msg = f"✈️ *{flight_num} Status: {status}*\n🛫 {dep} -> 🛬 {arr}\n🕒 Dep: {dep_time}"
     
     if dep_gate: msg += f"\n🚪 Dep Gate: {dep_gate}"
     if arr_gate: msg += f"\n🚪 Arr Gate: {arr_gate}"

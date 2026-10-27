@@ -1,40 +1,44 @@
-# Flight Status Tracker Bot ✈️
+# Flight Status Tracker Bot
 
-A serverless Telegram bot that tracks flight status, baggage claim info, and sends live updates to you and your groups. Runs entirely on GitHub Actions (free).
+A serverless Telegram bot that tracks flights and messages you or a group when the status, gate or
+baggage belt changes. It runs on a GitHub Actions schedule, so it needs no server.
 
-## Features
-- **Live Updates**: Status, Departure/Arrival times, Gates, and **Baggage Claim**.
-- **Multi-User**: Track flights for yourself or entire groups (e.g., "Family").
-- **Interactive**: Control the bot via Telegram commands.
-- **Serverless**: Runs on a schedule using GitHub Actions.
+## How it works
 
-## Setup Guide
+Every 5 minutes a GitHub Actions workflow runs `main.py`, which:
 
-### 1. Prerequisites
-- **AviationStack API Key**: [Get it here](https://aviationstack.com/) (Free).
-- **Telegram Bot**: Create one via `@BotFather` and get the **Token**.
+1. Reads new Telegram commands sent to the bot.
+2. Looks up each tracked flight on the [AirLabs](https://airlabs.co/) API.
+3. Compares the result with the last saved state and sends a Telegram message for anything that
+   changed: status, departure and arrival times, gates, baggage claim.
+4. Commits the updated subscriptions and flight states back to `data.json`.
 
-### 2. GitHub Configuration
-1.  **Fork/Clone** this repository.
-2.  Go to **Settings > Secrets and variables > Actions**.
-3.  Add the following Repository Secrets:
-    - `AVIATIONSTACK_API_KEY`
-    - `TELEGRAM_BOT_TOKEN`
-    - `TELEGRAM_CHAT_ID` (Your personal Chat ID, you become the "Host")
-4.  Go to **Settings > Actions > General**.
-5.  Under **Workflow permissions**, select **Read and write permissions** (required to save subscriptions).
+## Commands
 
-### 3. Usage
-**Commands:**
-- `/start` - Get your Chat ID.
-- `/track <flight>` - Track a flight (e.g., `/track AA100`).
-- `/stop <flight>` - Stop tracking.
+| Command | What it does |
+|---|---|
+| `/start` | Shows your chat ID |
+| `/track <flight>` | Track a flight, e.g. `/track AA100` |
+| `/stop <flight>` | Stop tracking it |
+| `/addgroup <name> <chat_id>` | Host only: add someone to a group, e.g. `/addgroup family 12345` |
+| `/trackgroup <name> <flight>` | Host only: track a flight for the whole group |
 
-**Group Commands (Host Only):**
-- `/addgroup <name> <chat_id>` - Add a user to a group (e.g., `/addgroup family 12345`).
-- `/trackgroup <name> <flight>` - Track a flight for the whole group.
+## Set it up
 
-## Local Development
-1.  Install dependencies: `pip install -r requirements.txt`
-2.  Create a `.env` file with your keys.
-3.  Run `python main.py`.
+1. Get an [AirLabs](https://airlabs.co/) API key and create a Telegram bot with `@BotFather`.
+2. Fork this repository.
+3. In **Settings → Secrets and variables → Actions**, add `AIRLABS_API_KEY`,
+   `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` (your own chat ID; you become the host).
+4. In **Settings → Actions → General → Workflow permissions**, choose **Read and write
+   permissions** so the workflow can save `data.json`.
+
+Run locally with a `.env` file holding the same three values:
+
+```bash
+pip install -r requirements.txt
+python main.py
+```
+
+## Stack
+
+Python · Telegram Bot API · AirLabs API · GitHub Actions
